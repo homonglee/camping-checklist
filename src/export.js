@@ -77,73 +77,108 @@ export function downloadCheckedXlsx(context) {
   saveBlob(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), createExportFilename(context.tripName, 'xlsx'));
 }
 
-function appendText(parent, tag, text, className) {
-  const element = document.createElement(tag);
-  if (className) element.className = className;
-  element.textContent = text;
-  parent.appendChild(element);
-  return element;
+export function paginatePdfRows(rows, pageSize = 16) {
+  const pages = [];
+  for (let index = 0; index < rows.length; index += pageSize) pages.push(rows.slice(index, index + pageSize));
+  return pages;
 }
 
-function buildPdfPage(context, rows, pageNumber, pageCount) {
-  const page = document.createElement('section');
-  page.setAttribute('aria-hidden', 'true');
-  Object.assign(page.style, {
-    position: 'fixed', left: '-10000px', top: '0', width: '760px', minHeight: '1040px',
-    padding: '44px', background: '#fffdf7', color: '#182b25', fontFamily: 'Arial, "Noto Sans KR", sans-serif',
+function fitCanvasLines(ctx, value, maxWidth, maxLines = 2) {
+  const characters = [...String(value ?? '')];
+  const lines = [];
+  let line = '';
+  for (const character of characters) {
+    const candidate = line + character;
+    if (line && ctx.measureText(candidate).width > maxWidth) {
+      lines.push(line);
+      line = character;
+      if (lines.length === maxLines) break;
+    } else {
+      line = candidate;
+    }
+  }
+  if (lines.length < maxLines && line) lines.push(line);
+  const consumed = lines.join('').length;
+  if (consumed < characters.length && lines.length) {
+    let last = lines.at(-1);
+    while (last && ctx.measureText(`${last}…`).width > maxWidth) last = last.slice(0, -1);
+    lines[lines.length - 1] = `${last}…`;
+  }
+  return lines;
+}
+
+function drawPdfPage(context, rows, pageNumber, pageCount) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1240;
+  canvas.height = 1754;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('PDF canvas context unavailable');
+
+  ctx.fillStyle = '#fffdf7';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#5e766d';
+  ctx.font = '700 22px "Noto Sans KR", Arial, sans-serif';
+  ctx.fillText('CAMPING CHECKLIST · SELECTED ITEMS', 70, 82);
+  ctx.fillStyle = '#182b25';
+  ctx.font = '800 48px "Noto Sans KR", Arial, sans-serif';
+  fitCanvasLines(ctx, context.tripName || '캠핑 체크리스트', 1100, 1).forEach((line, index) => ctx.fillText(line, 70, 155 + index * 58));
+  ctx.fillStyle = '#4d625a';
+  ctx.font = '500 24px "Noto Sans KR", Arial, sans-serif';
+  ctx.fillText(`${context.typeName} · ${context.duration} · ${context.people}명 · 선택 품목 ${context.rows.length}개`, 70, 215);
+
+  const left = 70;
+  const top = 270;
+  const headerHeight = 58;
+  const rowHeight = 76;
+  const widths = [180, 310, 100, 140, 370];
+  const headers = ['카테고리', '품목명', '수량', '중요도', '메모'];
+  ctx.fillStyle = '#173f35';
+  ctx.fillRect(left, top, widths.reduce((sum, width) => sum + width, 0), headerHeight);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 22px "Noto Sans KR", Arial, sans-serif';
+  let x = left;
+  headers.forEach((header, index) => {
+    ctx.fillText(header, x + 14, top + 37);
+    x += widths[index];
   });
-  const eyebrow = appendText(page, 'p', 'CAMPING CHECKLIST · SELECTED ITEMS');
-  Object.assign(eyebrow.style, { margin: '0 0 10px', color: '#5e766d', fontSize: '12px', fontWeight: '700', letterSpacing: '1.8px' });
-  const heading = appendText(page, 'h1', context.tripName || '캠핑 체크리스트');
-  Object.assign(heading.style, { margin: '0 0 8px', fontSize: '30px', lineHeight: '1.25' });
-  const meta = appendText(page, 'p', `${context.typeName} · ${context.duration} · ${context.people}명 · 선택 품목 ${context.rows.length}개`);
-  Object.assign(meta.style, { margin: '0 0 28px', color: '#4d625a', fontSize: '14px' });
-  const table = document.createElement('table');
-  Object.assign(table.style, { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: '13px' });
-  const colgroup = document.createElement('colgroup');
-  ['16%', '31%', '9%', '14%', '30%'].forEach(width => { const col = document.createElement('col'); col.style.width = width; colgroup.appendChild(col); });
-  table.appendChild(colgroup);
-  const thead = document.createElement('thead');
-  const headerRow = document.createElement('tr');
-  ['카테고리', '품목명', '수량', '중요도', '메모'].forEach(label => {
-    const cell = appendText(headerRow, 'th', label);
-    Object.assign(cell.style, { padding: '10px 8px', color: '#fff', background: '#173f35', border: '1px solid #173f35', textAlign: 'left' });
-  });
-  thead.appendChild(headerRow); table.appendChild(thead);
-  const tbody = document.createElement('tbody');
-  rows.forEach((row, index) => {
-    const tr = document.createElement('tr');
-    [row.카테고리, row.품목명, row.수량, row.중요도, row.메모 || ''].forEach(value => {
-      const cell = appendText(tr, 'td', value);
-      Object.assign(cell.style, { padding: '9px 8px', border: '1px solid #d9ded6', background: index % 2 ? '#f4f5ef' : '#ffffff', verticalAlign: 'top', wordBreak: 'break-word' });
+
+  ctx.font = '500 20px "Noto Sans KR", Arial, sans-serif';
+  rows.forEach((row, rowIndex) => {
+    const y = top + headerHeight + rowIndex * rowHeight;
+    ctx.fillStyle = rowIndex % 2 ? '#f4f5ef' : '#ffffff';
+    ctx.fillRect(left, y, 1100, rowHeight);
+    const values = [row.카테고리, row.품목명, row.수량, row.중요도, row.메모 || ''];
+    x = left;
+    values.forEach((value, columnIndex) => {
+      ctx.strokeStyle = '#d9ded6';
+      ctx.strokeRect(x, y, widths[columnIndex], rowHeight);
+      ctx.fillStyle = '#182b25';
+      const lines = fitCanvasLines(ctx, value, widths[columnIndex] - 28, 2);
+      const firstY = y + (lines.length > 1 ? 27 : 44);
+      lines.forEach((line, lineIndex) => ctx.fillText(line, x + 14, firstY + lineIndex * 27));
+      x += widths[columnIndex];
     });
-    tbody.appendChild(tr);
   });
-  table.appendChild(tbody); page.appendChild(table);
-  const footer = appendText(page, 'p', `${pageNumber} / ${pageCount} · Camping Checklist`);
-  Object.assign(footer.style, { margin: '24px 0 0', color: '#738078', fontSize: '11px', textAlign: 'right' });
-  document.body.appendChild(page);
-  return page;
+
+  ctx.fillStyle = '#738078';
+  ctx.font = '500 18px "Noto Sans KR", Arial, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(`${pageNumber} / ${pageCount} · Camping Checklist`, 1170, 1655);
+  ctx.textAlign = 'left';
+  return canvas;
 }
 
 export async function downloadCheckedPdf(context) {
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
+  const { jsPDF } = await import('jspdf');
   if (document.fonts?.ready) await document.fonts.ready;
-  const chunks = [];
-  for (let index = 0; index < context.rows.length; index += 16) chunks.push(context.rows.slice(index, index + 16));
+  const pages = paginatePdfRows(context.rows);
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
-  for (let index = 0; index < chunks.length; index += 1) {
-    const page = buildPdfPage(context, chunks[index], index + 1, chunks.length);
-    try {
-      const canvas = await html2canvas(page, { scale: 2, backgroundColor: '#fffdf7', logging: false, useCORS: true });
-      const maxWidth = 194;
-      const maxHeight = 281;
-      const ratio = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
-      if (index > 0) pdf.addPage();
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', 8, 8, canvas.width * ratio, canvas.height * ratio, undefined, 'FAST');
-    } finally {
-      page.remove();
-    }
-  }
+  pages.forEach((rows, index) => {
+    const canvas = drawPdfPage(context, rows, index + 1, pages.length);
+    if (index > 0) pdf.addPage();
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 8, 8, 194, 274.3, undefined, 'FAST');
+    canvas.width = 1;
+    canvas.height = 1;
+  });
   pdf.save(createExportFilename(context.tripName, 'pdf'));
 }

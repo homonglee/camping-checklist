@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { unzipSync, strFromU8 } from 'fflate';
-import { createExportFilename, createXlsxBytes, getCheckedExportRows } from '../src/export.js';
+import { createExportFilename, createXlsxBytes, getCheckedExportRows, paginatePdfRows } from '../src/export.js';
 
 const categories = [{ id: 'shelter', name: '주거' }, { id: 'food', name: '식재료' }];
 const importance = {
@@ -21,6 +21,15 @@ test('내보내기에는 선택한 항목만 사용자 표시값으로 포함한
 test('파일명은 위험한 문자를 제거하고 확장자를 붙인다', () => {
   assert.equal(createExportFilename('평창/가족:캠핑', 'xlsx'), '평창-가족-캠핑-준비목록.xlsx');
   assert.equal(createExportFilename('  ', 'pdf'), '캠핑-체크리스트-준비목록.pdf');
+});
+
+test('PDF 행은 모바일 브라우저 메모리를 제한하도록 페이지별로 나눈다', () => {
+  const rows = Array.from({ length: 33 }, (_, index) => ({ 품목명: `품목 ${index + 1}` }));
+  const pages = paginatePdfRows(rows, 16);
+
+  assert.deepEqual(pages.map(page => page.length), [16, 16, 1]);
+  assert.equal(pages[0][0].품목명, '품목 1');
+  assert.equal(pages[2][0].품목명, '품목 33');
 });
 
 test('XLSX 바이트는 메타데이터와 선택 항목을 담은 유효한 워크북 구조다', () => {

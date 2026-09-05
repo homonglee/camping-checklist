@@ -8,7 +8,9 @@ const executablePath = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrom
 const browser = await chromium.launch({ headless: true, executablePath });
 const errors = [];
 try {
+  const requestedAssets = [];
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  page.on('request', request => requestedAssets.push(request.url()));
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   const response = await page.goto('http://127.0.0.1:4173', { waitUntil: 'networkidle' });
@@ -50,6 +52,7 @@ try {
   const pdfBytes = await readFile('artifacts/e2e-checked.pdf');
   assert.equal(pdfBytes.subarray(0, 5).toString(), '%PDF-');
   assert.ok(pdfBytes.length > 10000);
+  assert.equal(requestedAssets.some(url => /html2canvas/i.test(url)), false, 'PDF 생성 중 html2canvas를 불러오면 안 됩니다');
 
   const categoryBlocks = page.locator('.category-block');
   assert.equal(await page.getByTestId('category-add').count(), await categoryBlocks.count());

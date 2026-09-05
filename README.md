@@ -1,4 +1,4 @@
-# Camping Checklist v0.3.0
+# Camping Checklist v0.3.1
 
 - 서비스: https://camping-checklist-three.vercel.app
 - GitHub: https://github.com/homonglee/camping-checklist
@@ -18,6 +18,7 @@
 - 수량·중요도·메모 수정 및 품목 삭제
 - 체크리스트 이름 및 최근 목록 로컬 저장
 - 선택한 항목만 PDF·XLSX 파일로 다운로드
+- 모바일 브라우저 호환성을 위한 네이티브 Canvas PDF 렌더링
 - 모바일·데스크톱 반응형 UI
 
 ## 실행
