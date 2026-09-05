@@ -50,7 +50,7 @@ export default function App() {
   const openHistory = entry => { setSetup(s => ({ ...s, type: entry.type, nights: entry.nights, people: entry.people })); setTripName(entry.name); setItems(entry.items); setScreen('checklist'); };
   const updateItem = updated => { const next = items.map(i => i.id === updated.id ? updated : i); setItems(next); persist(next); setEditing(null); };
   const deleteItem = id => { const next = items.filter(i => i.id !== id); setItems(next); persist(next); setEditing(null); };
-  const addItem = item => { const next = [...items, { ...item, id: `custom-${uid()}`, checked: false, memo: item.memo || '', custom: true }]; setItems(next); persist(next); setAdding(false); };
+  const addItem = item => { const next = [...items, { ...item, id: `custom-${uid()}`, checked: true, memo: item.memo || '', custom: true }]; setItems(next); persist(next); setAdding(false); };
   const toggleItem = id => { const next = items.map(i => i.id === id ? { ...i, checked: !i.checked } : i); setItems(next); persist(next); };
   const exportChecked = async format => {
     if (!checkedRows.length || exporting) return;
@@ -81,7 +81,7 @@ export default function App() {
       <button className="primary" onClick={() => setScreen('categories')}>다음 · 카테고리 선택 <span>→</span></button>
     </section>
     <section className="recent" id="recent"><div className="section-head"><div><p className="eyebrow">SAVED LOCALLY</p><h2>최근 체크리스트</h2></div></div>
-      {history.length ? history.map(entry => <button className="recent-card" key={entry.id} onClick={() => openHistory(entry)}><span className="mini-icon">{CAMPING_TYPES.find(t=>t.id===entry.type)?.icon}</span><span><strong>{entry.name}</strong><small>{formatTripDuration(entry.nights)} · {entry.people}명 · {new Date(entry.savedAt).toLocaleDateString('ko-KR')}</small></span><b>{entry.done}/{entry.total}<small>완료</small></b></button>) : <div className="empty"><span>🏕️</span><p>아직 저장한 체크리스트가 없어요.</p></div>}
+      {history.length ? history.map(entry => <button className="recent-card" key={entry.id} onClick={() => openHistory(entry)}><span className="mini-icon">{CAMPING_TYPES.find(t=>t.id===entry.type)?.icon}</span><span><strong>{entry.name}</strong><small>{formatTripDuration(entry.nights)} · {entry.people}명 · {new Date(entry.savedAt).toLocaleDateString('ko-KR')}</small></span><b>{entry.done}/{entry.total}<small>선택</small></b></button>) : <div className="empty"><span>🏕️</span><p>아직 저장한 체크리스트가 없어요.</p></div>}
     </section>
   </main>;
 
@@ -96,17 +96,17 @@ export default function App() {
 
   return <main className="app-shell checklist-screen">
     <header className="check-head"><div className="check-nav"><button className="icon-btn light" aria-label="새 체크리스트" onClick={startNew}>←</button><div><small>{typeInfo.icon} {typeInfo.name} · {formatTripDuration(setup.nights)} · {setup.people}명</small><input aria-label="체크리스트 이름" value={tripName} onChange={e=>setTripName(e.target.value)}/></div><button className="text-btn" onClick={saveChecklist}>저장</button></div>
-      <div className="progress-copy" data-testid="progress-copy"><span>준비 완료</span><strong>{progress.done} / {progress.total} <em>· {progress.percent}%</em></strong></div><div className="progress-track"><i style={{width:`${progress.percent}%`}}/></div>
+      <div className="progress-copy" data-testid="progress-copy"><span>선택한 준비물</span><strong>{progress.done} / {progress.total} <em>· {progress.percent}%</em></strong></div><div className="progress-track"><i style={{width:`${progress.percent}%`}}/></div><p className="selection-hint">필요 없는 물품만 체크를 해제하세요.</p>
     </header>
     <nav className="filter-tabs" aria-label="카테고리 필터"><button className={categoryFilter==='all'?'active':''} onClick={()=>setCategoryFilter('all')}>전체 <b>{items.length}</b></button>{CATEGORIES.filter(c=>items.some(i=>i.category===c.id)).map(c=><button key={c.id} className={categoryFilter===c.id?'active':''} onClick={()=>setCategoryFilter(c.id)}>{c.icon} {c.name}</button>)}</nav>
-    <section className="export-panel" aria-label="체크 완료 항목 파일 저장">
-      <div><strong>체크한 준비물 저장</strong><small>{checkedRows.length ? `${checkedRows.length}개 완료 항목만 파일에 포함돼요.` : '준비한 품목을 체크하면 파일로 저장할 수 있어요.'}</small></div>
+    <section className="export-panel" aria-label="선택한 준비물 파일 저장">
+      <div><strong>선택한 준비물 저장</strong><small>{checkedRows.length ? `${checkedRows.length}개 선택 항목만 파일에 포함돼요.` : '필요한 품목을 선택하면 파일로 저장할 수 있어요.'}</small></div>
       <div className="export-buttons">
         <button type="button" disabled={!checkedRows.length || Boolean(exporting)} onClick={()=>exportChecked('pdf')}><span>PDF</span>{exporting==='pdf'?'만드는 중…':'저장'}</button>
         <button type="button" disabled={!checkedRows.length || Boolean(exporting)} onClick={()=>exportChecked('xlsx')}><span>XLSX</span>{exporting==='xlsx'?'만드는 중…':'저장'}</button>
       </div>
     </section>
-    <section className="list-section">{CATEGORIES.filter(c=>categoryFilter==='all'||categoryFilter===c.id).map(category=>{const rows=filtered.filter(i=>i.category===category.id); if(!rows.length)return null; return <div className="category-block" key={category.id}><div className="category-title"><span>{category.icon}</span><h2>{category.name}</h2><small>{rows.filter(i=>i.checked).length}/{rows.length}</small></div>{rows.map(item=><article data-testid="check-item" className={`check-item ${item.checked?'done':''}`} key={item.id}>
+    <section className="list-section">{CATEGORIES.filter(c=>categoryFilter==='all'||categoryFilter===c.id).map(category=>{const rows=filtered.filter(i=>i.category===category.id); if(!rows.length)return null; return <div className="category-block" key={category.id}><div className="category-title"><span>{category.icon}</span><h2>{category.name}</h2><small>{rows.filter(i=>i.checked).length}/{rows.length}</small></div>{rows.map(item=><article data-testid="check-item" className={`check-item ${item.checked?'':'excluded'}`} key={item.id}>
       <label><input type="checkbox" checked={item.checked} onChange={()=>toggleItem(item.id)}/><i>✓</i></label><button className="item-main" onClick={()=>setEditing({...item})}><span><strong>{item.name}</strong>{item.memo&&<small>{item.memo}</small>}</span><span className={`badge ${item.importance}`}>{IMPORTANCE[item.importance]?.icon} {IMPORTANCE[item.importance]?.label}</span><b>× {item.quantity}</b></button>
     </article>)}</div>})}</section>
     <div className="bottom-actions"><button className="secondary" onClick={()=>setAdding(true)}>＋ 준비물 추가</button><button className="primary" onClick={saveChecklist}>체크리스트 저장 <span>✓</span></button></div>

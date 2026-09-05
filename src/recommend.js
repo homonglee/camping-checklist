@@ -37,7 +37,7 @@ export function generateChecklist({ type, nights = 1, people = 1, categories = C
       category: item.category,
       importance: item.relevance[type],
       quantity: calculateQuantity(item.quantityRule, nights, people),
-      checked: false,
+      checked: true,
       memo: '',
       custom: false,
     }))

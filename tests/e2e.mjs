@@ -21,22 +21,30 @@ try {
   assert.match(await page.getByRole('heading', { level: 1 }).textContent(), /무엇을/);
   await page.getByRole('button', { name: /맞춤 체크리스트 만들기/ }).click();
   assert.ok(await page.locator('[data-testid="check-item"]').count() > 30);
-  await page.locator('[data-testid="check-item"] input[type="checkbox"]').first().check();
-  assert.match(await page.getByTestId('progress-copy').textContent(), /1 \/ /);
+  const checklistItems = page.locator('[data-testid="check-item"]');
+  const totalItems = await checklistItems.count();
+  const excludedName = await checklistItems.first().locator('.item-main strong').textContent();
+  const includedName = await checklistItems.nth(1).locator('.item-main strong').textContent();
+  assert.equal(await checklistItems.locator('input[type="checkbox"]:checked').count(), totalItems);
+  assert.match(await page.getByTestId('progress-copy').textContent(), new RegExp(`${totalItems} \\/ ${totalItems}`));
+  await checklistItems.first().locator('input[type="checkbox"]').uncheck();
+  assert.match(await checklistItems.first().getAttribute('class'), /excluded/);
+  assert.match(await page.getByTestId('progress-copy').textContent(), new RegExp(`${totalItems - 1} \\/ ${totalItems}`));
   const xlsxPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /XLSX/ }).click();
   const xlsxDownload = await xlsxPromise;
-  assert.match(xlsxDownload.suggestedFilename(), /체크완료\.xlsx$/);
+  assert.match(xlsxDownload.suggestedFilename(), /준비목록\.xlsx$/);
   await xlsxDownload.saveAs('artifacts/e2e-checked.xlsx');
   const xlsxFiles = unzipSync(await readFile('artifacts/e2e-checked.xlsx'));
   const sheetXml = strFromU8(xlsxFiles['xl/worksheets/sheet1.xml']);
-  assert.match(sheetXml, /완료/);
-  assert.match(sheetXml, /텐트/);
+  assert.match(sheetXml, /포함/);
+  assert.ok(sheetXml.includes(`>${includedName}</t>`));
+  assert.equal(sheetXml.includes(`>${excludedName}</t>`), false);
 
   const pdfPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /PDF/ }).click();
   const pdfDownload = await pdfPromise;
-  assert.match(pdfDownload.suggestedFilename(), /체크완료\.pdf$/);
+  assert.match(pdfDownload.suggestedFilename(), /준비목록\.pdf$/);
   await pdfDownload.saveAs('artifacts/e2e-checked.pdf');
   const pdfBytes = await readFile('artifacts/e2e-checked.pdf');
   assert.equal(pdfBytes.subarray(0, 5).toString(), '%PDF-');
@@ -46,6 +54,8 @@ try {
   await page.getByLabel('품목명').fill('별 관측 망원경');
   await page.getByLabel('수량').fill('2');
   await page.getByRole('button', { name: '추가하기' }).click();
+  const customItem = page.locator('[data-testid="check-item"]').filter({ hasText: '별 관측 망원경' });
+  assert.equal(await customItem.locator('input[type="checkbox"]').isChecked(), true);
   await page.getByText('별 관측 망원경').click();
   await page.getByLabel('메모').fill('삼각대 포함');
   await page.getByRole('button', { name: '변경사항 저장' }).click();
@@ -56,12 +66,20 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
 
   const desktop = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  desktop.on('pageerror', e => errors.push(String(e)));
+  desktop.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await desktop.goto('http://127.0.0.1:4173', { waitUntil: 'networkidle' });
+  await desktop.getByRole('button', { name: /오토캠핑/ }).click();
+  await desktop.getByRole('button', { name: /다음/ }).click();
+  await desktop.getByRole('button', { name: /맞춤 체크리스트 만들기/ }).click();
+  const desktopItems = desktop.locator('[data-testid="check-item"]');
+  assert.equal(await desktopItems.locator('input[type="checkbox"]:checked').count(), await desktopItems.count());
+  assert.ok(await desktop.getByRole('region', { name: '선택한 준비물 파일 저장' }).isVisible());
   assert.equal(await desktop.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
   await page.screenshot({ path: 'artifacts/mobile-checklist.png', fullPage: true });
   await desktop.screenshot({ path: 'artifacts/desktop-checklist.png', fullPage: true });
   assert.deepEqual(errors, []);
-  console.log('E2E_OK: 생성, 체크, 추가, 편집, 저장, 새로고침, 모바일/데스크톱 반응형 검증 완료');
+  console.log('E2E_OK: 생성, 기본 전체 선택, 불필요 항목 해제, PDF/XLSX 내보내기, 추가, 편집, 저장, 새로고침, 모바일/데스크톱 반응형 검증 완료');
 } finally {
   await browser.close();
 }

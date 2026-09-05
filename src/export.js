@@ -7,7 +7,7 @@ export function getCheckedExportRows(items, categories, importance) {
   return items
     .filter(item => item.checked)
     .map(item => ({
-      완료: '완료',
+      포함: '예',
       카테고리: categoryNames.get(item.category) || item.category,
       품목명: item.name,
       수량: item.quantity,
@@ -23,7 +23,7 @@ export function createExportFilename(tripName, extension) {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '') || '캠핑-체크리스트';
-  return `${safeName}-체크완료.${extension}`;
+  return `${safeName}-준비목록.${extension}`;
 }
 
 const xmlEscape = value => String(value ?? '')
@@ -36,7 +36,7 @@ const textCell = (ref, value, style = 0) => `<c r="${ref}" t="inlineStr" s="${st
 const numberCell = (ref, value, style = 0) => `<c r="${ref}" s="${style}"><v>${Number(value) || 0}</v></c>`;
 
 export function createXlsxBytes({ tripName, typeName, duration, people, rows }) {
-  const headers = ['완료', '카테고리', '품목명', '수량', '중요도', '메모'];
+  const headers = ['포함', '카테고리', '품목명', '수량', '중요도', '메모'];
   const sheetRows = [
     `<row r="1" ht="28" customHeight="1">${textCell('A1', tripName || '캠핑 체크리스트', 1)}</row>`,
     `<row r="2">${textCell('A2', '캠핑 유형', 2)}${textCell('B2', typeName)}${textCell('C2', '일정', 2)}${textCell('D2', duration)}${textCell('E2', '인원', 2)}${textCell('F2', `${people}명`)}</row>`,
@@ -44,7 +44,7 @@ export function createXlsxBytes({ tripName, typeName, duration, people, rows }) 
     `<row r="4">${headers.map((header, index) => textCell(`${String.fromCharCode(65 + index)}4`, header, 3)).join('')}</row>`,
     ...rows.map((row, index) => {
       const rowNumber = index + 5;
-      return `<row r="${rowNumber}">${textCell(`A${rowNumber}`, row.완료, 4)}${textCell(`B${rowNumber}`, row.카테고리, 4)}${textCell(`C${rowNumber}`, row.품목명, 4)}${numberCell(`D${rowNumber}`, row.수량, 4)}${textCell(`E${rowNumber}`, row.중요도, 4)}${textCell(`F${rowNumber}`, row.메모, 4)}</row>`;
+      return `<row r="${rowNumber}">${textCell(`A${rowNumber}`, row.포함, 4)}${textCell(`B${rowNumber}`, row.카테고리, 4)}${textCell(`C${rowNumber}`, row.품목명, 4)}${numberCell(`D${rowNumber}`, row.수량, 4)}${textCell(`E${rowNumber}`, row.중요도, 4)}${textCell(`F${rowNumber}`, row.메모, 4)}</row>`;
     }),
   ].join('');
   const lastRow = Math.max(4, rows.length + 4);
@@ -53,7 +53,7 @@ export function createXlsxBytes({ tripName, typeName, duration, people, rows }) 
     '[Content_Types].xml': `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>`,
     '_rels/.rels': `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>`,
     'docProps/core.xml': `<?xml version="1.0" encoding="UTF-8"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${xmlEscape(tripName || '캠핑 체크리스트')}</dc:title><dc:creator>Camping Checklist</dc:creator></cp:coreProperties>`,
-    'xl/workbook.xml': `<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="체크완료" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+    'xl/workbook.xml': `<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="준비목록" sheetId="1" r:id="rId1"/></sheets></workbook>`,
     'xl/_rels/workbook.xml.rels': `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
     'xl/styles.xml': `<?xml version="1.0" encoding="UTF-8"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="16"/><color rgb="FFFFFFFF"/><name val="Arial"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF173F35"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border/><border><left style="thin"><color rgb="FFD9DED6"/></left><right style="thin"><color rgb="FFD9DED6"/></right><top style="thin"><color rgb="FFD9DED6"/></top><bottom style="thin"><color rgb="FFD9DED6"/></bottom></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0"/><xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyAlignment="1"><alignment horizontal="center"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`,
     'xl/worksheets/sheet1.xml': worksheet,
@@ -92,11 +92,11 @@ function buildPdfPage(context, rows, pageNumber, pageCount) {
     position: 'fixed', left: '-10000px', top: '0', width: '760px', minHeight: '1040px',
     padding: '44px', background: '#fffdf7', color: '#182b25', fontFamily: 'Arial, "Noto Sans KR", sans-serif',
   });
-  const eyebrow = appendText(page, 'p', 'CAMPING CHECKLIST · CHECKED ITEMS');
+  const eyebrow = appendText(page, 'p', 'CAMPING CHECKLIST · SELECTED ITEMS');
   Object.assign(eyebrow.style, { margin: '0 0 10px', color: '#5e766d', fontSize: '12px', fontWeight: '700', letterSpacing: '1.8px' });
   const heading = appendText(page, 'h1', context.tripName || '캠핑 체크리스트');
   Object.assign(heading.style, { margin: '0 0 8px', fontSize: '30px', lineHeight: '1.25' });
-  const meta = appendText(page, 'p', `${context.typeName} · ${context.duration} · ${context.people}명 · 체크 완료 ${context.rows.length}개`);
+  const meta = appendText(page, 'p', `${context.typeName} · ${context.duration} · ${context.people}명 · 선택 품목 ${context.rows.length}개`);
   Object.assign(meta.style, { margin: '0 0 28px', color: '#4d625a', fontSize: '14px' });
   const table = document.createElement('table');
   Object.assign(table.style, { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: '13px' });

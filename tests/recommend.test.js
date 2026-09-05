@@ -25,12 +25,12 @@ test('일반 추천은 Master DB 전체가 아니라 실제 사용 가능한 분
   assert.ok(list.some(item => item.id === 'water'));
 });
 
-test('선택 품목은 기본 제외하고 설정 시 포함하며 모든 생성 항목은 편집 가능한 사본이다', () => {
+test('선택 품목은 설정 시 포함하며 생성된 모든 항목은 기본 선택된 편집 가능 사본이다', () => {
   const base = { type: 'backpacking', nights: 0, people: 1, categories: ['leisure'] };
   const normal = generateChecklist(base);
   const expanded = generateChecklist({ ...base, includeOptional: true });
   assert.ok(expanded.length > normal.length);
-  assert.ok(expanded.every(item => item.checked === false && item.memo === ''));
+  assert.ok(expanded.every(item => item.checked === true && item.memo === ''));
   expanded[0].name = '변경';
   assert.notEqual(normal[0]?.name, '변경');
 });
