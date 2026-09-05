@@ -87,6 +87,11 @@ try {
   const desktopItems = desktop.locator('[data-testid="check-item"]');
   assert.equal(await desktopItems.locator('input[type="checkbox"]:checked').count(), await desktopItems.count());
   assert.ok(await desktop.getByRole('region', { name: '선택한 준비물 파일 저장' }).isVisible());
+  assert.equal(
+    await desktop.locator('.bottom-actions').evaluate(element => Boolean(element.querySelector('.footer-export'))),
+    true,
+    'PDF/XLSX 저장 영역은 체크리스트 저장 버튼 바로 아래에 있어야 합니다',
+  );
   assert.equal(await desktop.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
   await page.screenshot({ path: 'artifacts/mobile-checklist.png', fullPage: true });
   await desktop.screenshot({ path: 'artifacts/desktop-checklist.png', fullPage: true });

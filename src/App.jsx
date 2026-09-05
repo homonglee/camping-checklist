@@ -99,17 +99,19 @@ export default function App() {
       <div className="progress-copy" data-testid="progress-copy"><span>선택한 준비물</span><strong>{progress.done} / {progress.total} <em>· {progress.percent}%</em></strong></div><div className="progress-track"><i style={{width:`${progress.percent}%`}}/></div><p className="selection-hint">필요 없는 물품만 체크를 해제하세요.</p>
     </header>
     <nav className="filter-tabs" aria-label="카테고리 필터"><button className={categoryFilter==='all'?'active':''} onClick={()=>setCategoryFilter('all')}>전체 <b>{items.length}</b></button>{CATEGORIES.filter(c=>items.some(i=>i.category===c.id)).map(c=><button key={c.id} className={categoryFilter===c.id?'active':''} onClick={()=>setCategoryFilter(c.id)}>{c.icon} {c.name}</button>)}</nav>
-    <section className="export-panel" aria-label="선택한 준비물 파일 저장">
-      <div><strong>선택한 준비물 저장</strong><small>{checkedRows.length ? `${checkedRows.length}개 선택 항목만 파일에 포함돼요.` : '필요한 품목을 선택하면 파일로 저장할 수 있어요.'}</small></div>
-      <div className="export-buttons">
-        <button type="button" disabled={!checkedRows.length || Boolean(exporting)} onClick={()=>exportChecked('pdf')}><span>PDF</span>{exporting==='pdf'?'만드는 중…':'저장'}</button>
-        <button type="button" disabled={!checkedRows.length || Boolean(exporting)} onClick={()=>exportChecked('xlsx')}><span>XLSX</span>{exporting==='xlsx'?'만드는 중…':'저장'}</button>
-      </div>
-    </section>
     <section className="list-section">{CATEGORIES.filter(c=>(setup.categories.includes(c.id)||items.some(i=>i.category===c.id))&&(categoryFilter==='all'||categoryFilter===c.id)).map(category=>{const rows=filtered.filter(i=>i.category===category.id); return <div className="category-block" key={category.id}><div className="category-title"><span>{category.icon}</span><h2>{category.name}</h2><small>{rows.filter(i=>i.checked).length}/{rows.length}</small></div>{rows.map(item=><article data-testid="check-item" className={`check-item ${item.checked?'':'excluded'}`} key={item.id}>
       <label><input type="checkbox" checked={item.checked} onChange={()=>toggleItem(item.id)}/><i>✓</i></label><button className="item-main" onClick={()=>setEditing({...item})}><span><strong>{item.name}</strong>{item.memo&&<small>{item.memo}</small>}</span><span className={`badge ${item.importance}`}>{IMPORTANCE[item.importance]?.icon} {IMPORTANCE[item.importance]?.label}</span><b>× {item.quantity}</b></button>
     </article>)}<button type="button" className="category-add" data-testid="category-add" onClick={()=>setAdding(category.id)}>＋ {category.name} 준비물 추가</button></div>})}</section>
-    <div className="bottom-actions single"><button className="primary" onClick={saveChecklist}>체크리스트 저장 <span>✓</span></button></div>
+    <div className="bottom-actions single">
+      <button className="primary" onClick={saveChecklist}>체크리스트 저장 <span>✓</span></button>
+      <section className="footer-export" aria-label="선택한 준비물 파일 저장">
+        <div className="export-buttons">
+          <button type="button" disabled={!checkedRows.length || Boolean(exporting)} onClick={()=>exportChecked('pdf')}><span>PDF</span>{exporting==='pdf'?'만드는 중…':'저장'}</button>
+          <button type="button" disabled={!checkedRows.length || Boolean(exporting)} onClick={()=>exportChecked('xlsx')}><span>XLSX</span>{exporting==='xlsx'?'만드는 중…':'저장'}</button>
+        </div>
+        <small>{checkedRows.length ? `${checkedRows.length}개 선택 항목만 파일에 포함돼요.` : '필요한 품목을 선택하면 파일로 저장할 수 있어요.'}</small>
+      </section>
+    </div>
     {editing&&<ItemEditor item={editing} onChange={setEditing} onSave={()=>updateItem(editing)} onDelete={()=>deleteItem(editing.id)} onClose={()=>setEditing(null)}/>}
     {adding&&<AddItem category={adding} onAdd={addItem} onClose={()=>setAdding(null)}/>}
   </main>;
