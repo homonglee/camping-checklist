@@ -2,6 +2,7 @@ import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { strFromU8, unzipSync } from 'fflate';
+import { CATEGORIES } from '../src/data.js';
 
 const executablePath = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const browser = await chromium.launch({ headless: true, executablePath });
@@ -50,7 +51,15 @@ try {
   assert.equal(pdfBytes.subarray(0, 5).toString(), '%PDF-');
   assert.ok(pdfBytes.length > 10000);
 
-  await page.getByRole('button', { name: /준비물 추가/ }).click();
+  const categoryBlocks = page.locator('.category-block');
+  assert.equal(await page.getByTestId('category-add').count(), await categoryBlocks.count());
+  for (const category of CATEGORIES) {
+    await page.getByRole('button', { name: `${category.name} 준비물 추가` }).click();
+    assert.equal(await page.getByRole('dialog').locator('select').inputValue(), category.id);
+    await page.getByRole('button', { name: '닫기' }).click();
+  }
+  await page.getByRole('button', { name: '여가·기타 준비물 추가' }).click();
+  assert.equal(await page.getByRole('dialog').locator('select').inputValue(), 'leisure');
   await page.getByLabel('품목명').fill('별 관측 망원경');
   await page.getByLabel('수량').fill('2');
   await page.getByRole('button', { name: '추가하기' }).click();
@@ -79,7 +88,7 @@ try {
   await page.screenshot({ path: 'artifacts/mobile-checklist.png', fullPage: true });
   await desktop.screenshot({ path: 'artifacts/desktop-checklist.png', fullPage: true });
   assert.deepEqual(errors, []);
-  console.log('E2E_OK: 생성, 기본 전체 선택, 불필요 항목 해제, PDF/XLSX 내보내기, 추가, 편집, 저장, 새로고침, 모바일/데스크톱 반응형 검증 완료');
+  console.log('E2E_OK: 생성, 기본 전체 선택, 불필요 항목 해제, 10개 카테고리별 준비물 추가, PDF/XLSX 내보내기, 편집, 저장, 새로고침, 모바일/데스크톱 반응형 검증 완료');
 } finally {
   await browser.close();
 }

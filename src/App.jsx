@@ -31,7 +31,7 @@ export default function App() {
   const [history, setHistory] = useState(initial.history || []);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [editing, setEditing] = useState(null);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(null);
   const [exporting, setExporting] = useState(null);
   const progress = checklistProgress(items);
   const typeInfo = CAMPING_TYPES.find(t => t.id === setup.type);
@@ -50,7 +50,7 @@ export default function App() {
   const openHistory = entry => { setSetup(s => ({ ...s, type: entry.type, nights: entry.nights, people: entry.people })); setTripName(entry.name); setItems(entry.items); setScreen('checklist'); };
   const updateItem = updated => { const next = items.map(i => i.id === updated.id ? updated : i); setItems(next); persist(next); setEditing(null); };
   const deleteItem = id => { const next = items.filter(i => i.id !== id); setItems(next); persist(next); setEditing(null); };
-  const addItem = item => { const next = [...items, { ...item, id: `custom-${uid()}`, checked: true, memo: item.memo || '', custom: true }]; setItems(next); persist(next); setAdding(false); };
+  const addItem = item => { const next = [...items, { ...item, id: `custom-${uid()}`, checked: true, memo: item.memo || '', custom: true }]; setItems(next); persist(next); setAdding(null); };
   const toggleItem = id => { const next = items.map(i => i.id === id ? { ...i, checked: !i.checked } : i); setItems(next); persist(next); };
   const exportChecked = async format => {
     if (!checkedRows.length || exporting) return;
@@ -106,12 +106,12 @@ export default function App() {
         <button type="button" disabled={!checkedRows.length || Boolean(exporting)} onClick={()=>exportChecked('xlsx')}><span>XLSX</span>{exporting==='xlsx'?'만드는 중…':'저장'}</button>
       </div>
     </section>
-    <section className="list-section">{CATEGORIES.filter(c=>categoryFilter==='all'||categoryFilter===c.id).map(category=>{const rows=filtered.filter(i=>i.category===category.id); if(!rows.length)return null; return <div className="category-block" key={category.id}><div className="category-title"><span>{category.icon}</span><h2>{category.name}</h2><small>{rows.filter(i=>i.checked).length}/{rows.length}</small></div>{rows.map(item=><article data-testid="check-item" className={`check-item ${item.checked?'':'excluded'}`} key={item.id}>
+    <section className="list-section">{CATEGORIES.filter(c=>(setup.categories.includes(c.id)||items.some(i=>i.category===c.id))&&(categoryFilter==='all'||categoryFilter===c.id)).map(category=>{const rows=filtered.filter(i=>i.category===category.id); return <div className="category-block" key={category.id}><div className="category-title"><span>{category.icon}</span><h2>{category.name}</h2><small>{rows.filter(i=>i.checked).length}/{rows.length}</small></div>{rows.map(item=><article data-testid="check-item" className={`check-item ${item.checked?'':'excluded'}`} key={item.id}>
       <label><input type="checkbox" checked={item.checked} onChange={()=>toggleItem(item.id)}/><i>✓</i></label><button className="item-main" onClick={()=>setEditing({...item})}><span><strong>{item.name}</strong>{item.memo&&<small>{item.memo}</small>}</span><span className={`badge ${item.importance}`}>{IMPORTANCE[item.importance]?.icon} {IMPORTANCE[item.importance]?.label}</span><b>× {item.quantity}</b></button>
-    </article>)}</div>})}</section>
-    <div className="bottom-actions"><button className="secondary" onClick={()=>setAdding(true)}>＋ 준비물 추가</button><button className="primary" onClick={saveChecklist}>체크리스트 저장 <span>✓</span></button></div>
+    </article>)}<button type="button" className="category-add" data-testid="category-add" onClick={()=>setAdding(category.id)}>＋ {category.name} 준비물 추가</button></div>})}</section>
+    <div className="bottom-actions single"><button className="primary" onClick={saveChecklist}>체크리스트 저장 <span>✓</span></button></div>
     {editing&&<ItemEditor item={editing} onChange={setEditing} onSave={()=>updateItem(editing)} onDelete={()=>deleteItem(editing.id)} onClose={()=>setEditing(null)}/>}
-    {adding&&<AddItem onAdd={addItem} onClose={()=>setAdding(false)}/>}
+    {adding&&<AddItem category={adding} onAdd={addItem} onClose={()=>setAdding(null)}/>}
   </main>;
 }
 
@@ -120,7 +120,7 @@ function ItemEditor({item,onChange,onSave,onDelete,onClose}) { return <Modal tit
   <label>메모<textarea value={item.memo} onChange={e=>onChange({...item,memo:e.target.value})} placeholder="구매처, 보관 위치 등을 적어두세요"/></label><div className="modal-actions"><button className="danger" onClick={onDelete}>목록에서 삭제</button><button className="primary" disabled={!item.name.trim()} onClick={onSave}>변경사항 저장</button></div>
 </div></Modal> }
 
-function AddItem({onAdd,onClose}) { const [draft,setDraft]=useState({name:'',quantity:1,category:'leisure',importance:'recommended',memo:''}); return <Modal title="준비물 추가" onClose={onClose}><div className="form">
+function AddItem({category,onAdd,onClose}) { const [draft,setDraft]=useState({name:'',quantity:1,category,importance:'recommended',memo:''}); return <Modal title="준비물 추가" onClose={onClose}><div className="form">
   <label>품목명<input autoFocus value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="예: 별 관측 망원경"/></label><div className="form-row"><label>수량<input aria-label="수량" type="number" min="1" value={draft.quantity} onChange={e=>setDraft({...draft,quantity:Math.max(1,Number(e.target.value))})}/></label><label>카테고리<select value={draft.category} onChange={e=>setDraft({...draft,category:e.target.value})}>{CATEGORIES.map(c=><option value={c.id} key={c.id}>{c.icon} {c.name}</option>)}</select></label></div>
   <label>메모<textarea value={draft.memo} onChange={e=>setDraft({...draft,memo:e.target.value})}/></label><div className="modal-actions"><button className="ghost" onClick={onClose}>취소</button><button className="primary" disabled={!draft.name.trim()} onClick={()=>onAdd(draft)}>추가하기</button></div>
 </div></Modal> }
