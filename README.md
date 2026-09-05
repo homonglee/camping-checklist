@@ -1,5 +1,8 @@
 # Camping Checklist v0.1
 
+- 서비스: https://camping-checklist-three.vercel.app
+- GitHub: https://github.com/homonglee/camping-checklist
+
 캠핑 유형, 숙박 기간, 인원수에 따라 준비물을 추천하는 모바일 우선 MVP입니다.
 
 ## 구현 범위
