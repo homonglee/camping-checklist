@@ -1,0 +1,19 @@
+{
+  "name": "camping-checklist",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "node tests/e2e.mjs"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "playwright-core": "latest"
+  }
+}

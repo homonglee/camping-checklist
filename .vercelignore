@@ -1,0 +1,12 @@
+.git/
+.vercel/
+node_modules/
+tools/
+artifacts/
+tests/
+*.exe
+*-headers.txt
+local.html
+public.html
+public-error.html
+static-local.html

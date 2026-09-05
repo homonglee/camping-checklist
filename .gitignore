@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.vercel/
+.env*
+tools/
+artifacts/
+*.html.tmp
+local.html
+public.html
+public-error.html
+static-local.html
+*-headers.txt
+.DS_Store
+Thumbs.db
