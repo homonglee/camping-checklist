@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CAMPING_TYPES, CATEGORIES, IMPORTANCE } from './data.js';
 import { checklistProgress, formatTripDuration, generateChecklist } from './recommend.js';
+import { downloadCheckedPdf, downloadCheckedXlsx, getCheckedExportRows } from './export.js';
+import './export.css';
 
 const STORAGE_KEY = 'camping-checklist-v01';
 const freshSetup = { type: 'auto', nights: 2, people: 2, categories: CATEGORIES.map(c => c.id), includeOptional: false };
@@ -30,8 +32,10 @@ export default function App() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
+  const [exporting, setExporting] = useState(null);
   const progress = checklistProgress(items);
   const typeInfo = CAMPING_TYPES.find(t => t.id === setup.type);
+  const checkedRows = useMemo(() => getCheckedExportRows(items, CATEGORIES, IMPORTANCE), [items]);
 
   const persist = (nextItems = items, nextHistory = history, name = tripName) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ setup, current: { name, items: nextItems, savedAt: new Date().toISOString() }, history: nextHistory }));
@@ -48,6 +52,20 @@ export default function App() {
   const deleteItem = id => { const next = items.filter(i => i.id !== id); setItems(next); persist(next); setEditing(null); };
   const addItem = item => { const next = [...items, { ...item, id: `custom-${uid()}`, checked: false, memo: item.memo || '', custom: true }]; setItems(next); persist(next); setAdding(false); };
   const toggleItem = id => { const next = items.map(i => i.id === id ? { ...i, checked: !i.checked } : i); setItems(next); persist(next); };
+  const exportChecked = async format => {
+    if (!checkedRows.length || exporting) return;
+    const context = { tripName, typeName: typeInfo.name, duration: formatTripDuration(setup.nights), people: setup.people, rows: checkedRows };
+    setExporting(format);
+    try {
+      if (format === 'pdf') await downloadCheckedPdf(context);
+      else downloadCheckedXlsx(context);
+    } catch (error) {
+      console.error(error);
+      alert('파일을 만들지 못했어요. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setExporting(null);
+    }
+  };
   const filtered = categoryFilter === 'all' ? items : items.filter(i => i.category === categoryFilter);
 
   if (screen === 'home') return <main className="app-shell home">
@@ -81,6 +99,13 @@ export default function App() {
       <div className="progress-copy" data-testid="progress-copy"><span>준비 완료</span><strong>{progress.done} / {progress.total} <em>· {progress.percent}%</em></strong></div><div className="progress-track"><i style={{width:`${progress.percent}%`}}/></div>
     </header>
     <nav className="filter-tabs" aria-label="카테고리 필터"><button className={categoryFilter==='all'?'active':''} onClick={()=>setCategoryFilter('all')}>전체 <b>{items.length}</b></button>{CATEGORIES.filter(c=>items.some(i=>i.category===c.id)).map(c=><button key={c.id} className={categoryFilter===c.id?'active':''} onClick={()=>setCategoryFilter(c.id)}>{c.icon} {c.name}</button>)}</nav>
+    <section className="export-panel" aria-label="체크 완료 항목 파일 저장">
+      <div><strong>체크한 준비물 저장</strong><small>{checkedRows.length ? `${checkedRows.length}개 완료 항목만 파일에 포함돼요.` : '준비한 품목을 체크하면 파일로 저장할 수 있어요.'}</small></div>
+      <div className="export-buttons">
+        <button type="button" disabled={!checkedRows.length || Boolean(exporting)} onClick={()=>exportChecked('pdf')}><span>PDF</span>{exporting==='pdf'?'만드는 중…':'저장'}</button>
+        <button type="button" disabled={!checkedRows.length || Boolean(exporting)} onClick={()=>exportChecked('xlsx')}><span>XLSX</span>{exporting==='xlsx'?'만드는 중…':'저장'}</button>
+      </div>
+    </section>
     <section className="list-section">{CATEGORIES.filter(c=>categoryFilter==='all'||categoryFilter===c.id).map(category=>{const rows=filtered.filter(i=>i.category===category.id); if(!rows.length)return null; return <div className="category-block" key={category.id}><div className="category-title"><span>{category.icon}</span><h2>{category.name}</h2><small>{rows.filter(i=>i.checked).length}/{rows.length}</small></div>{rows.map(item=><article data-testid="check-item" className={`check-item ${item.checked?'done':''}`} key={item.id}>
       <label><input type="checkbox" checked={item.checked} onChange={()=>toggleItem(item.id)}/><i>✓</i></label><button className="item-main" onClick={()=>setEditing({...item})}><span><strong>{item.name}</strong>{item.memo&&<small>{item.memo}</small>}</span><span className={`badge ${item.importance}`}>{IMPORTANCE[item.importance]?.icon} {IMPORTANCE[item.importance]?.label}</span><b>× {item.quantity}</b></button>
     </article>)}</div>})}</section>

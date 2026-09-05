@@ -1,5 +1,7 @@
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { strFromU8, unzipSync } from 'fflate';
 
 const executablePath = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const browser = await chromium.launch({ headless: true, executablePath });
@@ -21,6 +23,25 @@ try {
   assert.ok(await page.locator('[data-testid="check-item"]').count() > 30);
   await page.locator('[data-testid="check-item"] input[type="checkbox"]').first().check();
   assert.match(await page.getByTestId('progress-copy').textContent(), /1 \/ /);
+  const xlsxPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /XLSX/ }).click();
+  const xlsxDownload = await xlsxPromise;
+  assert.match(xlsxDownload.suggestedFilename(), /체크완료\.xlsx$/);
+  await xlsxDownload.saveAs('artifacts/e2e-checked.xlsx');
+  const xlsxFiles = unzipSync(await readFile('artifacts/e2e-checked.xlsx'));
+  const sheetXml = strFromU8(xlsxFiles['xl/worksheets/sheet1.xml']);
+  assert.match(sheetXml, /완료/);
+  assert.match(sheetXml, /텐트/);
+
+  const pdfPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /PDF/ }).click();
+  const pdfDownload = await pdfPromise;
+  assert.match(pdfDownload.suggestedFilename(), /체크완료\.pdf$/);
+  await pdfDownload.saveAs('artifacts/e2e-checked.pdf');
+  const pdfBytes = await readFile('artifacts/e2e-checked.pdf');
+  assert.equal(pdfBytes.subarray(0, 5).toString(), '%PDF-');
+  assert.ok(pdfBytes.length > 10000);
+
   await page.getByRole('button', { name: /준비물 추가/ }).click();
   await page.getByLabel('품목명').fill('별 관측 망원경');
   await page.getByLabel('수량').fill('2');

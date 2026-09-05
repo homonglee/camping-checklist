@@ -1,4 +1,4 @@
-# Camping Checklist v0.1
+# Camping Checklist v0.2
 
 - 서비스: https://camping-checklist-three.vercel.app
 - GitHub: https://github.com/homonglee/camping-checklist
@@ -15,6 +15,7 @@
 - 체크, 진행률, 카테고리 필터
 - 품목 추가, 수량·중요도·메모 수정, 삭제
 - 체크리스트 이름 및 최근 목록 로컬 저장
+- 체크 완료 항목만 PDF·XLSX 파일로 다운로드
 - 모바일·데스크톱 반응형 UI
 
 ## 실행
@@ -32,7 +33,7 @@ npm run build
 npm run test:e2e
 ```
 
-E2E 테스트는 Chrome을 사용하며 생성 → 체크 → 품목 추가 → 수정 → 저장 → 새로고침 복원과 390px/1280px 반응형을 검증합니다.
+E2E 테스트는 Chrome을 사용하며 생성 → 체크 → PDF·XLSX 실제 다운로드 → 품목 추가 → 수정 → 저장 → 새로고침 복원과 390px/1280px 반응형을 검증합니다.
 
 ## 데이터 구조
 
